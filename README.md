@@ -1,1 +1,1 @@
-google OAuth 2.0 example in Go
+Google OAuth 2.0 example in Go
