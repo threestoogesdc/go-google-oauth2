@@ -4,6 +4,8 @@ import (
   "net/http"
   "net/url"
   "fmt"
+  //"strings"
+  "encoding/json"
 
   "io/ioutil"
 
@@ -13,6 +15,13 @@ import (
   "code.google.com/p/goauth2/oauth"
 )
 
+type TokenResponse struct {
+  Access_token string
+  Token_type string
+  Expires_in int
+  Id_token string
+}
+
 const (
   BASE_SITE = "https://accounts.google.com/o"
   AUTH_PATH = "/oauth2/auth"
@@ -21,7 +30,9 @@ const (
 
   CLIENT_ID = "670315590273-04lcsdb09rom5d3uejvnet15fti0affi"
   CLIENT_SECRET = "DwdAYjN92XJL3HpnGkfFd7JE"
-  REDIRECT_URI = "http://ts-go-oauth2.appspot.com/auth/callback"
+  REDIRECT_URI = "http://localhost:8080/auth/callback"
+
+  REQUEST_API = "https://www.googleapis.com/oauth2/v1/userinfo?access_token="
 )
 
 var oauthCfg = &oauth.Config {
@@ -33,7 +44,7 @@ var oauthCfg = &oauth.Config {
   Scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email",
 }
 
-var templates = template.Must(template.ParseFiles())
+//var templates = template.Must(template.ParseFiles())
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
   fmt.Fprintln(w, "root");
@@ -83,16 +94,34 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
     http.Error(w, "error", http.StatusInternalServerError)
     return
   }
-  bs := string(bb)
+  var tr TokenResponse
 
-  fmt.Fprintln(w, bs)
+  err = json.Unmarshal(bb, &tr)
+  //bs := string(bb)
+
+  //fmt.Fprintln(w, "success")
+  //fmt.Fprintf(w, "%#v", tr.Access_token)
+
+  url := REQUEST_API + tr.Access_token
+  //fmt.Fprintf(w, "%v", url)
+
+  cl := urlfetch.Client(c)
+  respo, _ := cl.Get(url)
+  if respo.StatusCode != 200 {
+    http.Error(w, "api error", http.StatusInternalServerError)
+    return
+  }
+  defer respo.Body.Close()
+
+  d, _ := ioutil.ReadAll(respo.Body)
+  ds := string(d)
+
+  fmt.Fprintf(w, "%#v", ds)
 }
 
 func init() {
   http.HandleFunc("/", handleRoot)
   http.HandleFunc("/auth", handleAuth);
   http.HandleFunc("/auth/callback", handleAuthCallback)
-  http.HandleFunc("/auth/success", handleAuthSuccess)
-  http.HandleFunc("/auth/failure", handleAuthFailure)
-}
 
+}
