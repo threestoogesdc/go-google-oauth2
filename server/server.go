@@ -4,17 +4,23 @@ import (
   "net/http"
   "net/url"
   "fmt"
-  //"strings"
+
   "encoding/json"
 
   "io/ioutil"
 
   "appengine"
   "appengine/urlfetch"
+  "html/template"
 
   "code.google.com/p/goauth2/oauth"
 )
 
+/**
+ * json package only accesses the
+ * the exported fields of struct types
+ * (those that begin with an uppercase letter)
+ */
 type TokenResponse struct {
   Access_token string
   Token_type string
@@ -22,7 +28,22 @@ type TokenResponse struct {
   Id_token string
 }
 
+type UserInfo struct {
+  Id string
+  Email string
+  Verified_email bool
+  Name string
+  Given_name string
+  Family_name string
+  Link string
+  Picture string
+  Gender string
+  Birthday string
+}
+
 const (
+  VIEW_PATH = "app/views/"
+
   BASE_SITE = "https://accounts.google.com/o"
   AUTH_PATH = "/oauth2/auth"
   TOKEN_PATH = "/oauth2/token"
@@ -95,15 +116,9 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
     return
   }
   var tr TokenResponse
-
   err = json.Unmarshal(bb, &tr)
-  //bs := string(bb)
-
-  //fmt.Fprintln(w, "success")
-  //fmt.Fprintf(w, "%#v", tr.Access_token)
 
   url := REQUEST_API + tr.Access_token
-  //fmt.Fprintf(w, "%v", url)
 
   cl := urlfetch.Client(c)
   respo, _ := cl.Get(url)
@@ -114,14 +129,42 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
   defer respo.Body.Close()
 
   d, _ := ioutil.ReadAll(respo.Body)
-  ds := string(d)
 
-  fmt.Fprintf(w, "%#v", ds)
+  var ui UserInfo
+  err = json.Unmarshal(d, &ui)
+
+  renderTemplate(w, "success", &ui)
+}
+
+func handleSuccess(w http.ResponseWriter, r *http.Request) {
+  var ui = UserInfo{
+    "id",
+    "test",
+    true,
+    "name",
+    "given",
+    "family",
+    "link",
+    "picture",
+    "gender",
+    "birthday",
+  }
+
+  renderTemplate(w, "success", &ui)
+}
+
+var templates = template.Must(template.ParseFiles(VIEW_PATH + "success.html"))
+
+func renderTemplate(w http.ResponseWriter, tmpl string, ui *UserInfo) {
+  err := templates.ExecuteTemplate(w, tmpl + ".html", ui)
+  if err != nil {
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+  }
 }
 
 func init() {
   http.HandleFunc("/", handleRoot)
   http.HandleFunc("/auth", handleAuth);
   http.HandleFunc("/auth/callback", handleAuthCallback)
-
+  http.HandleFunc("/success", handleSuccess)
 }
