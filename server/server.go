@@ -51,7 +51,7 @@ const (
 
   CLIENT_ID = "670315590273-04lcsdb09rom5d3uejvnet15fti0affi"
   CLIENT_SECRET = "DwdAYjN92XJL3HpnGkfFd7JE"
-  REDIRECT_URI = "http://localhost:8080/auth/callback"
+  REDIRECT_URI = "http://ts-go-oauth2.appspot.com/auth/callback"
 
   REQUEST_API = "https://www.googleapis.com/oauth2/v1/userinfo?access_token="
 )
@@ -68,7 +68,7 @@ var oauthCfg = &oauth.Config {
 //var templates = template.Must(template.ParseFiles())
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
-  fmt.Fprintln(w, "root");
+  renderTemplate(w, "index")
 }
 
 func handleAuth(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +133,7 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
   var ui UserInfo
   err = json.Unmarshal(d, &ui)
 
-  renderTemplate(w, "success", &ui)
+  renderUserTemplate(w, "success", &ui)
 }
 
 func handleSuccess(w http.ResponseWriter, r *http.Request) {
@@ -150,16 +150,24 @@ func handleSuccess(w http.ResponseWriter, r *http.Request) {
     "birthday",
   }
 
-  renderTemplate(w, "success", &ui)
+  renderUserTemplate(w, "success", &ui)
 }
 
-var templates = template.Must(template.ParseFiles(VIEW_PATH + "success.html"))
+var templates = template.Must(template.ParseFiles(VIEW_PATH + "success.html", VIEW_PATH + "index.html"))
 
-func renderTemplate(w http.ResponseWriter, tmpl string, ui *UserInfo) {
+func renderUserTemplate(w http.ResponseWriter, tmpl string, ui *UserInfo) {
   err := templates.ExecuteTemplate(w, tmpl + ".html", ui)
   if err != nil {
     http.Error(w, err.Error(), http.StatusInternalServerError)
   }
+}
+
+func renderTemplate(w http.ResponseWriter, tmpl string) {
+  err := templates.ExecuteTemplate(w, tmpl + ".html", nil)
+  if err != nil {
+    http.Error(w, err.Error(), http.StatusInternalServerError)
+  }
+
 }
 
 func init() {
