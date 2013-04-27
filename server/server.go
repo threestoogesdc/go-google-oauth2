@@ -15,13 +15,6 @@ import (
   "appengine/urlfetch"
 )
 
-
-type TokenResponse struct {
-  AccessToken string
-  RefreshToken string
-  Expiry int64
-}
-
 // json package only accesses the
 // the exported fields of struct types
 // (those that begin with an uppercase letter)
