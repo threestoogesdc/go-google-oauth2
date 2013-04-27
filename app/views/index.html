@@ -6,22 +6,39 @@
     <link href="/css/bootstrap.css" rel="stylesheet" media="screen">
   </head>
   <body>
+    <form method="POST" action="/auth">
 
-    <div class="container">
-      <div class="row">
-        <section>
-          <div class="hero-unit">
-            <h1>GO Google OAuth</h1>
-            <p>Press the Authenticate button to test.</p>
+      <div class="container">
+        <div class="row">
+          <section>
+            <div class="hero-unit">
+              <h1>GO Google OAuth</h1>
+              <p>Press the Authenticate button to test.</p>
+            </div>
+          </section>
+        </div>
+        <div class="row" style="margin-left:20px;">
+          <div class="span3">
+            <section>
+              <button type="submit" class="btn">Authenticate</button>
+            </section>
           </div>
-        </section>
+          <div class="span8">
+            <section>
+              {{range .}}
+                <label class="checkbox">
+                  <input type="checkbox" name="scopes[]" value="{{.Url}}">
+                  <strong>{{.Desc}}</strong>
+                  <br>
+                  <span class="muted">{{.Url}}</span>
+                </label>
+              {{end}}
+            </section>
+          </div>
+        </div>
       </div>
-      <div class="row" style="margin-left:20px;">
-        <section>
-          <a class="btn" href="/auth">Authenticate</a>
-        </section>
-      </div>
-    </div>
+
+    </form>
     <script src="http://code.jquery.com/jquery.js"></script>
   </body>
 </html>
