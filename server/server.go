@@ -2,32 +2,29 @@ package gogoogleoauth2
 
 import (
   "net/http"
-  "net/url"
   "fmt"
 
-  "encoding/json"
+  "html/template"
 
+  "encoding/json"
   "io/ioutil"
+
+  "code.google.com/p/goauth2/oauth"
 
   "appengine"
   "appengine/urlfetch"
-  "html/template"
-
-  "code.google.com/p/goauth2/oauth"
 )
 
-/**
- * json package only accesses the
- * the exported fields of struct types
- * (those that begin with an uppercase letter)
- */
+
 type TokenResponse struct {
-  Access_token string
-  Token_type string
-  Expires_in int
-  Id_token string
+  AccessToken string
+  RefreshToken string
+  Expiry int64
 }
 
+// json package only accesses the
+// the exported fields of struct types
+// (those that begin with an uppercase letter)
 type UserInfo struct {
   Id string
   Email string
@@ -41,6 +38,7 @@ type UserInfo struct {
   Birthday string
 }
 
+
 const (
   VIEW_PATH = "app/views/"
 
@@ -51,7 +49,7 @@ const (
 
   CLIENT_ID = "670315590273-04lcsdb09rom5d3uejvnet15fti0affi"
   CLIENT_SECRET = "DwdAYjN92XJL3HpnGkfFd7JE"
-  REDIRECT_URI = "http://ts-go-oauth2.appspot.com/auth/callback"
+  REDIRECT_URI = "http://localhost:8080/auth/callback"
 
   REQUEST_API = "https://www.googleapis.com/oauth2/v1/userinfo?access_token="
 )
@@ -93,42 +91,23 @@ func handleAuthCallback(w http.ResponseWriter, r *http.Request) {
   }
 
   c := appengine.NewContext(r)
-  client := urlfetch.Client(c)
+  transport := &oauth.Transport{Config: oauthCfg, Transport: &urlfetch.Transport{Context: c}}
 
-  data := url.Values{}
-  data.Add("code", code)
-  data.Add("client_id", CLIENT_ID)
-  data.Add("client_secret", CLIENT_SECRET)
-  data.Add("redirect_uri", REDIRECT_URI)
-  data.Add("grant_type", "authorization_code")
 
-  resp, _ := client.PostForm(BASE_SITE + TOKEN_PATH, data)
+  token, err := transport.Exchange(code)
+  if err != nil {
+    fmt.Fprintf(w, "error exchange %#v", err)
+  }
 
-  if resp.StatusCode != 200 {
-    http.Error(w, "error", http.StatusInternalServerError)
+  url := REQUEST_API + token.AccessToken
+  resp, err := transport.Client().Get(url)
+  if err != nil {
+    http.Error(w, "api error", http.StatusInternalServerError)
     return
   }
   defer resp.Body.Close()
 
-  bb, err := ioutil.ReadAll(resp.Body)
-  if err != nil {
-    http.Error(w, "error", http.StatusInternalServerError)
-    return
-  }
-  var tr TokenResponse
-  err = json.Unmarshal(bb, &tr)
-
-  url := REQUEST_API + tr.Access_token
-
-  cl := urlfetch.Client(c)
-  respo, _ := cl.Get(url)
-  if respo.StatusCode != 200 {
-    http.Error(w, "api error", http.StatusInternalServerError)
-    return
-  }
-  defer respo.Body.Close()
-
-  d, _ := ioutil.ReadAll(respo.Body)
+  d, _ := ioutil.ReadAll(resp.Body)
 
   var ui UserInfo
   err = json.Unmarshal(d, &ui)
